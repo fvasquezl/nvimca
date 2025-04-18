@@ -25,19 +25,21 @@ servers.intelephense = {
 servers.phpactor = {
   on_attach = function(client, _)
     -- Desactiva todo excepto codeAction
-    -- local disable = {
-    --  "hoverProvider",
-    -- "definitionProvider",
-    -- "referencesProvider",
-    -- "documentFormattingProvider",
-    -- "documentRangeFormattingProvider",
-    -- "renameProvider",
-    -- "documentSymbolProvider",
-    -- "semanticTokensProvider",
-    -- }
-    -- for _, capability in ipairs(disable) do
-    --   client.server_capabilities[capability] = false
-    -- end
+    local disable = {
+      "hoverProvider",
+      "definitionProvider",
+      "referencesProvider",
+      "documentFormattingProvider",
+      "documentRangeFormattingProvider",
+      "renameProvider",
+      "documentSymbolProvider",
+      "semanticTokensProvider",
+    }
+    for _, capability in ipairs(disable) do
+      if client.server_capabilities[capability] ~= nil then
+        client.server_capabilities[capability] = false
+      end
+    end
     client.server_capabilities.completionProvider = nil
     client.server_capabilities.signatureHelpProvider = nil
   end,

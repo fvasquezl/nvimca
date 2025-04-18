@@ -1,93 +1,106 @@
-local phpactor = function()
-  vim.ui.select({
-    "class_inflect",
-    "context_menu",
-    "expand_class",
-    "generate_accessor",
-    "change_visibility",
-    "copy_class",
-    "import_class",
-    "import_missing_classes",
-    "move_class",
-    "navigate",
-    "new_class",
-    "transform",
-    "update",
-    "config",
-    "status",
-    "cache_clear",
-  }, {
-    prompt = "Phpactor Action",
-  }, function(choice)
-    if not choice or choice == "" then
-      return
-    end
-
-    if choice == "new_class" then
-      return vim.ui.input({
-        prompt = "New Class Name (e.g. App\\Services\\MyService)",
-      }, function(value)
-        if not value or value == "" then
-          return
-        end
-        require("phpactor").rpc("new_class", { class = value })
-      end)
-    else
-      require("phpactor").rpc(choice, {})
-    end
-  end)
-end
-
 return {
+  -- Phpactor como herramienta externa (no como LSP)
   "adalessa/phpactor.nvim",
   cmd = { "PhpActor" },
+  dependencies = {
+    "nvim-lua/plenary.nvim",
+    "nvim-telescope/telescope.nvim",
+  },
   keys = {
-    { "<leader>pa", phpactor, desc = "PhpActor: Action Menu" },
     {
-      "<leader>pg",
+      "<leader>pa",
       function()
-        require("phpactor").rpc("generate_accessor", {})
+        local pickers = require("telescope.pickers")
+        local finders = require("telescope.finders")
+        local conf = require("telescope.config").values
+        -- local actions = require("telescope.actions")
+        -- local action_state = require("telescope.actions.state")
+
+        local phpactor_actions = {
+          "import_class",
+          "import_missing_classes",
+          "generate_accessor",
+          "move_class",
+          "new_class",
+          "copy_class",
+          "change_visibility",
+          "class_inflect",
+          "transform",
+          "navigate",
+          "expand_class",
+          "context_menu",
+          "status",
+          "cache_clear",
+          "config",
+        }
+
+        pickers
+          .new({}, {
+            prompt_title = "Phpactor Actions",
+            finder = finders.new_table({
+              results = phpactor_actions,
+            }),
+            sorter = conf.generic_sorter({}),
+            attach_mappings = function(prompt_bufnr, map)
+              local actions = require("telescope.actions")
+              local action_state = require("telescope.actions.state")
+              map("i", "<CR>", function()
+                local selection = action_state.get_selected_entry()
+                actions.close(prompt_bufnr)
+
+                -- Si es "new_class", pedimos el nombre
+                if selection.value == "new_class" then
+                  vim.ui.input({
+                    prompt = "New Class Name (e.g. App\\Services\\MyService)",
+                  }, function(value)
+                    if value and value ~= "" then
+                      require("phpactor").rpc("new_class", { class = value })
+                    end
+                  end)
+                else
+                  require("phpactor").rpc(selection.value, {})
+                end
+              end)
+              return true
+            end,
+          })
+          :find()
       end,
-      desc = "PhpActor: Generate Accessors",
-    },
-    {
-      "<leader>pm",
-      function()
-        require("phpactor").rpc("move_class", {})
-      end,
-      desc = "PhpActor: Move Class",
+      desc = "Phpactor: Action Menu (Telescope)",
     },
     {
       "<leader>pi",
       function()
         require("phpactor").rpc("import_missing_classes", {})
       end,
-      desc = "PhpActor: Import Missing Classes",
+      desc = "Phpactor: Import Missing Classes",
+    },
+    {
+      "<leader>pg",
+      function()
+        require("phpactor").rpc("generate_accessor", {})
+      end,
+      desc = "Phpactor: Generate Accessors",
+    },
+    {
+      "<leader>pm",
+      function()
+        require("phpactor").rpc("move_class", {})
+      end,
+      desc = "Phpactor: Move Class",
     },
     {
       "<leader>pc",
       ":PhpActor context_menu<CR>",
-      desc = "PhpActor: Context Menu",
+      desc = "Phpactor: Context Menu",
     },
   },
-  dependencies = { "nvim-lua/plenary.nvim" },
   opts = {
     install = {
-      bin = "/usr/bin/phpactor", -- usa el binario global
+      bin = "/usr/bin/phpactor", -- puedes ajustar si usas otra ruta
     },
     lspconfig = {
-      enabled = false, -- 👈 lo dejamos deshabilitado como LSP
+      enabled = false, -- 🔒 no usamos phpactor como LSP
     },
   },
-  -- config = function()
-  --   -- 👉 Agregamos code actions de Phpactor sobre <leader>ca para PHP
-  --   vim.api.nvim_create_autocmd("FileType", {
-  --     pattern = "php",
-  --     callback = function()
-  --       vim.keymap.set("n", "<leader>ca", function()
-  --         require("phpactor").rpc("context_menu", {})
-  --       end, { buffer = true, desc = "Phpactor: Code Actions (override)" })
-  --     end,
-  --   })
-  -- end,
 }
